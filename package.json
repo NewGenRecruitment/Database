@@ -1,7 +1,7 @@
 {
   "publishConfig": { "registry": "https://newgen.registry.nodejitsu.com" },
   "name": "ng-database",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "database.js",
   "author": "Josh Cole <josh.cole@newgenrecruitment.com>",
   "contributors": [{

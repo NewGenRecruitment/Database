@@ -371,3 +371,8 @@ Database.prototype.containsObjectId = function (arr, objectId, property) {
   return (index !== null);
 
 };
+
+/*
+ * Expose class.
+ */
+module.exports = Database;

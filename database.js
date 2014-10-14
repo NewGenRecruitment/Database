@@ -7,7 +7,7 @@ var extender      = require('ng-extender')
 /*
  * Create a new instance of the database class.
  * [options]
- *  schema      (string)     Filename for the schema file in JSON format.
+ *  schema      (str/obj)    Either the absolute path to a schema file OR a schema object.
  *  credentials (string)     A MongoDB connection string.
  *  debug       (bool>false) Set true to manually enable Mongoose debug output.
  * callback(err, options)
@@ -17,9 +17,9 @@ function Database (options, callback) {
 
   // Default option values
   options = extender.extend({
-      schemaFilename: null
-    , credentials:    null
-    , debug:          false
+      schema:      null
+    , credentials: null
+    , debug:       false
   }, options);
 
   // Variables for this instance
@@ -31,7 +31,7 @@ function Database (options, callback) {
   this.model             = {};
 
   // Build the schema for the first time and pass options to the callback
-  this.rebuildSchema(options.schemaFilename, function (err) {
+  this.rebuildSchema(options.schema, function (err) {
     return callback(err, options);
   });
 
@@ -41,11 +41,11 @@ function Database (options, callback) {
  * [Re]builds the Mongoose schema from the short-hand JSON format.
  * callback(err);
  */
-Database.prototype.rebuildSchema = function (schemaFilename, callback) {
+Database.prototype.rebuildSchema = function (schema, callback) {
   if (typeof callback !== 'function') callback = function(){};
 
   // Convert the short-hand schema to Mongoose format
-  schemaBuilder.build(schemaFilename, function (err, mongooseModels) {
+  schemaBuilder.build(schema, function (err, mongooseModels) {
 
     if (err) return callback(err);
 

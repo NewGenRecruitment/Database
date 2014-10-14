@@ -10,10 +10,8 @@ var extender      = require('ng-extender')
  *  schema      (str/obj)    Either the absolute path to a schema file OR a schema object.
  *  credentials (string)     A MongoDB connection string.
  *  debug       (bool>false) Set true to manually enable Mongoose debug output.
- * callback(err, options)
  */
-function Database (options, callback) {
-  if (typeof callback !== 'function') callback = function(){};
+function Database (options) {
 
   // Default option values
   options = extender.extend({
@@ -23,17 +21,13 @@ function Database (options, callback) {
   }, options);
 
   // Variables for this instance
+  this.schema            = options.schema;
   this.credentials       = options.credentials;
   this.debug             = options.debug;
   this.conx              = null;
   this.isConnectedFlag   = false;
   this.onConnectHandlers = [];
   this.model             = {};
-
-  // Build the schema for the first time and pass options to the callback
-  this.rebuildSchema(options.schema, function (err) {
-    return callback(err, options);
-  });
 
 };
 
@@ -77,6 +71,15 @@ Database.prototype.connect = function (callback) {
     return callback(null, this);
 
   var ME = this;  //keep reference to 'this' inside nested methods.
+
+  // Build the schema for the first time
+  if (_.keys(this.models).length === 0) {
+    this.rebuildSchema(this.schema, function (err) {
+      if (err) return callback(err);
+      return ME.connect(callback);  //drop out of this method & re-enter from the top
+    });
+    return;
+  }
 
   // Add the primary callback, if any
   if (typeof callback === 'function') this.onConnectHandlers.unshift(callback);

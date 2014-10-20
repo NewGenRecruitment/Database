@@ -15,7 +15,29 @@ ME.connectionsList = {};
  * Returns the database connection for the given ID.
  */
 ME.use = function (dbId) {
+
+  // If the connection doesn't exist yet, create an empty object ready for it
+  if (_.isUndefined(ME.connectionsList[dbId])) ME.connectionsList[dbId] = {};
+
   return ME.connectionsList[dbId];
+
+};
+
+/*
+ * Stores a reference to a database connection for later use.
+ */
+ME.store = function (dbId, dbObj) {
+
+  // No reference exists yet, store this as an entirely new reference
+  if (_.isUndefined(ME.connectionsList[dbId])) {
+    ME.connectionsList[dbId] = dbObj;
+  }
+
+  // Update the existing reference
+  else {
+    ME.connectionsList[dbId] = extender.merge(ME.connectionsList[dbId], dbObj);
+  }
+
 };
 
 /*
@@ -64,7 +86,7 @@ ME.Connection = function (options) {
   this.model             = {};
 
   // Store this connection
-  ME.connectionsList[options.dbId] = this;
+  ME.store(options.dbId, this);
 
 };
 
@@ -75,15 +97,15 @@ ME.Connection = function (options) {
 ME.Connection.prototype.rebuildSchema = function (schema, callback) {
   if (typeof callback !== 'function') callback = function(){};
 
-  var ME = this;
+  var that = this;
 
   // Convert the short-hand schema to Mongoose format
   schemaBuilder.build(schema, function (err, mongooseModels) {
 
     if (err) return callback(err);
 
-    // Successfully build the models
-    ME.model = mongooseModels;
+    // Successfully merge in the models
+    that.model = extender.merge(that.model, mongooseModels);
     return callback(null);
 
   });
@@ -109,13 +131,13 @@ ME.Connection.prototype.connect = function (callback) {
   if (this.isConnectedFlag && typeof callback === 'function')
     return callback(null, this);
 
-  var ME = this;  //keep reference to 'this' inside nested methods.
+  var that = this;  //keep reference to 'this' inside nested methods.
 
   // Build the schema for the first time
   if (_.keys(this.model).length === 0) {
     this.rebuildSchema(this.schema, function (err) {
       if (err) return callback(err);
-      return ME.connect(callback);  //drop out of this method & re-enter from the top
+      return that.connect(callback);  //drop out of this method & re-enter from the top
     });
     return;
   }
@@ -144,29 +166,29 @@ ME.Connection.prototype.connect = function (callback) {
 
     logger.error('Database Error!').error(err);
 
-    ME.isConnectedFlag = false;
+    that.isConnectedFlag = false;
 
-    passToConnectionHandlers(err, ME.onConnectHandlers);
-    ME.onConnectHandlers = [];
+    passToConnectionHandlers(err, that.onConnectHandlers);
+    that.onConnectHandlers = [];
 
   });
 
   // Success handler, pass the database object to all connection handlers
   this.conx.once('open', function () {
 
-    ME.isConnectedFlag = true;
+    that.isConnectedFlag = true;
 
-    passToConnectionHandlers(null, ME.onConnectHandlers);
-    ME.onConnectHandlers = [];
+    passToConnectionHandlers(null, that.onConnectHandlers);
+    that.onConnectHandlers = [];
 
   });
 
   this.conx.on('connected', function () {
-    ME.isConnectedFlag = true;
+    that.isConnectedFlag = true;
   });
 
   this.conx.on('disconnected', function () {
-    ME.isConnectedFlag = false;
+    that.isConnectedFlag = false;
   });
 
 };
@@ -178,10 +200,10 @@ ME.Connection.prototype.connect = function (callback) {
 ME.Connection.prototype.disconnect = function (callback) {
   if (typeof callback !== 'function') callback = function(){};
 
-  var ME = this;  //keep reference to 'this' inside nested methods.
+  var that = this;  //keep reference to 'this' inside nested methods.
 
   return mongoose.disconnect(function () {
-    ME.isConnectedFlag = false;
+    that.isConnectedFlag = false;
     return callback();
   });
 

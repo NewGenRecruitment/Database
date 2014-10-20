@@ -110,7 +110,7 @@ ME.Connection.prototype.connect = function (callback) {
   var ME = this;  //keep reference to 'this' inside nested methods.
 
   // Build the schema for the first time
-  if (_.keys(this.models).length === 0) {
+  if (_.keys(this.model).length === 0) {
     this.rebuildSchema(this.schema, function (err) {
       if (err) return callback(err);
       return ME.connect(callback);  //drop out of this method & re-enter from the top

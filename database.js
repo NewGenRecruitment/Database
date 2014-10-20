@@ -104,7 +104,7 @@ ME.Connection.prototype.setDebug = function (debug) {
 ME.Connection.prototype.connect = function (callback) {
 
   // Already connected!
-  if (!this.isConnectedFlag && typeof callback === 'function')
+  if (this.isConnectedFlag && typeof callback === 'function')
     return callback(null, this);
 
   var ME = this;  //keep reference to 'this' inside nested methods.

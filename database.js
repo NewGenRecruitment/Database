@@ -75,13 +75,15 @@ ME.Connection = function (options) {
 ME.Connection.prototype.rebuildSchema = function (schema, callback) {
   if (typeof callback !== 'function') callback = function(){};
 
+  var ME = this;
+
   // Convert the short-hand schema to Mongoose format
   schemaBuilder.build(schema, function (err, mongooseModels) {
 
     if (err) return callback(err);
 
     // Successfully build the models
-    this.model = mongooseModels;
+    ME.model = mongooseModels;
     return callback(null);
 
   });

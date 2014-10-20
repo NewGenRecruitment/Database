@@ -2,91 +2,103 @@ var ME            = module.exports
   , extender      = require('ng-extender')
   , logger        = require('ng-logger')
   , schemaBuilder = require('ng-schema-builder')
-  , crypto        = require('crypto')
   , mongoose      = require('mongoose')
   , _             = require('underscore');
 
-/*
- * List of stored database connections.
- */
-ME.connectionsList = {};
+ME.credentials       = null;
+ME.debug             = false;
+ME.conx              = null;
+ME.isConnectedFlag   = false;
+ME.onConnectHandlers = [];
+ME.model             = {};
 
 /*
- * Returns the database connection for the given ID.
- */
-ME.use = function (dbId) {
-
-  // If the connection doesn't exist yet, create an empty object ready for it
-  if (_.isUndefined(ME.connectionsList[dbId])) ME.connectionsList[dbId] = {};
-
-  return ME.connectionsList[dbId];
-
-};
-
-/*
- * Stores a reference to a database connection for later use.
- */
-ME.store = function (dbId, dbObj) {
-
-  // No reference exists yet, store this as an entirely new reference
-  if (_.isUndefined(ME.connectionsList[dbId])) {
-    ME.connectionsList[dbId] = dbObj;
-  }
-
-  // Update the existing reference
-  else {
-    ME.connectionsList[dbId] = extender.merge(ME.connectionsList[dbId], dbObj);
-  }
-
-};
-
-/*
- * Generates a unique random ID to use for a database connection.
- */
-ME.generateDBId = function () {
-
-  var seed  = new Date().getTime() + Math.random()
-    , algo  = crypto.createHash('sha256')
-    , value = 'hash-' + seed;
-
-  algo.update(value, 'utf8');
-  return algo.digest('hex');
-
-};
-
-/*
- * Create a new instance of the database class.
+ * Connect to the database.
+ * callback(err, database)
+ * handler(err, database)
  * [options]
  *  schema      (str/obj)    Either the absolute path to a schema file OR a schema object.
  *  credentials (string)     A MongoDB connection string.
  *  debug       (bool>false) Set true to manually enable Mongoose debug output.
  */
-ME.Connection = function (options) {
+ME.connect = function (options, callback) {
+  if (!_.isFunction(callback)) callback = function(){};
 
   // Default option values
   options = extender.extend({
-      dbId:        null
-    , schema:      null
+      schema:      null
     , credentials: null
     , debug:       false
   }, options);
 
-  // Always ensure we have a dbId
-  if (!options.dbId || !_.isString(options.dbId))
-    options.dbId = ME.generateDBId();
+  // Already connected!
+  if (ME.isConnectedFlag) return callback(null, ME);
 
-  // Variables for this instance
-  this.dbId              = options.dbId;
-  this.schema            = options.schema;
-  this.credentials       = options.credentials;
-  this.debug             = options.debug;
-  this.conx              = null;
-  this.isConnectedFlag   = false;
-  this.onConnectHandlers = [];
-  this.model             = {};
+  // Store for later
+  ME.credentials = options.credentials;
+  ME.debug       = options.debug;
 
-  // Store this connection
-  ME.store(options.dbId, this);
+  // Build the schema for the first time
+  if (_.keys(ME.model).length === 0) {
+    ME.rebuildSchema(options.schema, function (err) {
+      if (err) return callback(err);
+      return ME.connect(options, callback);  //drop out of this method & re-enter from the top
+    });
+    return;
+  }
+
+  // Add the primary callback, if any
+  if (_.isFunction(callback)) ME.onConnectHandlers.unshift(callback);
+
+  // When debugging, this will output all calls mongoose makes.
+  if (ME.debug) mongoose.set('debug', true);
+
+  // Connect!
+  mongoose.connect(ME.credentials);
+  ME.conx = mongoose.connection;
+
+  // Error handler, pass the error to all connection handlers
+  ME.conx.on('error', function (err) {
+
+    logger.error('Database Error!').error(err);
+
+    ME.passToConnectionHandlers(ME.onConnectHandlers, err);
+    ME.isConnectedFlag = false;
+
+  });
+
+  // Success handler, pass the database object to all connection handlers
+  ME.conx.once('open', function () {
+
+    ME.isConnectedFlag = true;
+
+    ME.passToConnectionHandlers(ME.onConnectHandlers);
+    ME.onConnectHandlers = [];
+
+  });
+
+  ME.conx.on('connected', function () {
+    ME.isConnectedFlag = true;
+  });
+
+  ME.conx.on('disconnected', function () {
+    ME.isConnectedFlag = false;
+  });
+
+};
+
+/*
+ * Takes an array of connection handlers and fires them, passing in the error,
+ * if any.
+ */
+ME.passToConnectionHandlers = function (handlers, err) {
+  err = err || null;
+
+  if (handlers && handlers.length > 0) {
+    for (var h = 0 ; h < handlers.length ; h++) {
+      handlers[h](err, ME);
+    }
+  }
 
 };
 
@@ -94,10 +106,8 @@ ME.Connection = function (options) {
  * [Re]builds the Mongoose schema from the short-hand JSON format.
  * callback(err);
  */
-ME.Connection.prototype.rebuildSchema = function (schema, callback) {
-  if (typeof callback !== 'function') callback = function(){};
-
-  var that = this;
+ME.rebuildSchema = function (schema, callback) {
+  if (!_.isFunction(callback)) callback = function(){};
 
   // Convert the short-hand schema to Mongoose format
   schemaBuilder.build(schema, function (err, mongooseModels) {
@@ -105,7 +115,7 @@ ME.Connection.prototype.rebuildSchema = function (schema, callback) {
     if (err) return callback(err);
 
     // Successfully merge in the models
-    that.model = extender.merge(that.model, mongooseModels);
+    ME.model = mongooseModels;
     return callback(null);
 
   });
@@ -115,95 +125,20 @@ ME.Connection.prototype.rebuildSchema = function (schema, callback) {
 /*
  * Toggle Mongoose debug output.
  */
-ME.Connection.prototype.setDebug = function (debug) {
-  this.debug = debug;
+ME.setDebug = function (debug) {
+  ME.debug = debug;
   mongoose.set('debug', debug);
-};
-
-/*
- * Connects and sets up the database ready for use.
- * callback(err, database)
- * handler(err, database)
- */
-ME.Connection.prototype.connect = function (callback) {
-
-  // Already connected!
-  if (this.isConnectedFlag && typeof callback === 'function')
-    return callback(null, this);
-
-  var that = this;  //keep reference to 'this' inside nested methods.
-
-  // Build the schema for the first time
-  if (_.keys(this.model).length === 0) {
-    this.rebuildSchema(this.schema, function (err) {
-      if (err) return callback(err);
-      return that.connect(callback);  //drop out of this method & re-enter from the top
-    });
-    return;
-  }
-
-  // Add the primary callback, if any
-  if (typeof callback === 'function') this.onConnectHandlers.unshift(callback);
-
-  // When debugging, this will output all calls mongoose makes.
-  if (this.debug) mongoose.set('debug', true);
-
-  // Connect!
-  mongoose.connect(this.credentials);
-  this.conx = mongoose.connection;
-
-  // Prepare the method for passing details to each handler
-  var passToConnectionHandlers = function (err, handlers) {
-    if (handlers && handlers.length > 0) {
-      for (var h = 0 ; h < handlers.length ; h++) {
-        handlers[h](err, ME);
-      }
-    }
-  };
-
-  // Error handler, pass the error to all connection handlers
-  this.conx.on('error', function (err) {
-
-    logger.error('Database Error!').error(err);
-
-    that.isConnectedFlag = false;
-
-    passToConnectionHandlers(err, that.onConnectHandlers);
-    that.onConnectHandlers = [];
-
-  });
-
-  // Success handler, pass the database object to all connection handlers
-  this.conx.once('open', function () {
-
-    that.isConnectedFlag = true;
-
-    passToConnectionHandlers(null, that.onConnectHandlers);
-    that.onConnectHandlers = [];
-
-  });
-
-  this.conx.on('connected', function () {
-    that.isConnectedFlag = true;
-  });
-
-  this.conx.on('disconnected', function () {
-    that.isConnectedFlag = false;
-  });
-
 };
 
 /*
  * Disconnects from the database.
  * callback();
  */
-ME.Connection.prototype.disconnect = function (callback) {
-  if (typeof callback !== 'function') callback = function(){};
-
-  var that = this;  //keep reference to 'this' inside nested methods.
+ME.disconnect = function (callback) {
+  if (!_.isFunction(callback)) callback = function(){};
 
   return mongoose.disconnect(function () {
-    that.isConnectedFlag = false;
+    ME.isConnectedFlag = false;
     return callback();
   });
 
@@ -213,23 +148,23 @@ ME.Connection.prototype.disconnect = function (callback) {
  * Stores a handler to be run when the connection is ready.
  * onConnectHandler(err, database)
  */
-ME.Connection.prototype.onConnected = function (fn) {
-  if (typeof fn !== 'function') return;
+ME.onConnected = function (fn) {
+  if (!_.isFunction(fn)) return;
 
   // Run it now if we are connected and all other connection handlers have been dealt with
-  if (this.isConnectedFlag && this.onConnectHandlers.length === 0)
-    return fn(null, this);
+  if (ME.isConnectedFlag && ME.onConnectHandlers.length === 0)
+    return fn(null, ME);
 
   // Otherwise store it for later
-  this.onConnectHandlers.push(fn);
+  ME.onConnectHandlers.push(fn);
 
 };
 
 /*
  * Returns true if the database is connected.
  */
-ME.Connection.prototype.isConnected = function () {
-  return this.isConnectedFlag;
+ME.isConnected = function () {
+  return ME.isConnectedFlag;
 };
 
 /*
@@ -237,7 +172,7 @@ ME.Connection.prototype.isConnected = function () {
  * parameter is optional.
  * callback(err, doc)
  */
-ME.Connection.prototype.pushReference = function (doc, fieldName, value, callback) {
+ME.pushReference = function (doc, fieldName, value, callback) {
 
   // Push onto arrays, for all other types replace the value
   if (_.isArray(doc[fieldName])) { doc[fieldName].push(value); }
@@ -250,13 +185,14 @@ ME.Connection.prototype.pushReference = function (doc, fieldName, value, callbac
 };
 
 /*
- * Gets a single document by its ID alone.
+ * Gets a single document by its ID alone, ensuring only non-deleted records are
+ * returned.
  * callback(err, doc)
  */
-ME.Connection.prototype.getById = function (collectionName, id, callback) {
+ME.findById = function (collectionName, id, callback) {
 
   // Setup query to return one item
-  this.model[collectionName].findOne({
+  ME.model[collectionName].findOne({
       _id:                 id
     , 'deleted.isDeleted': false
   })
@@ -269,19 +205,19 @@ ME.Connection.prototype.getById = function (collectionName, id, callback) {
  * set to 'min' this will return the minimum value instead.
  * callback(err, maxValue, doc)
  */
-ME.Connection.prototype.getMax = function (collectionName, fieldName, conditions, callback, getting) {
+ME.findMax = function (collectionName, fieldName, conditions, callback, getting) {
   conditions = conditions || {};
   getting    = getting    || 'max';
 
   // Setup query to return one item
-  var query = this.model[collectionName].findOne(conditions);
+  var query = ME.model[collectionName].findOne(conditions);
 
   // Sort DESC (so we only find the top one)
   var operand = (getting === 'max' ? '-' : (getting === 'min' ? '+' : ''));
   query.sort(operand + fieldName);
 
   // No callback, return thr query instead
-  if (typeof callback !== 'function') return query;
+  if (!_.isFunction(callback)) return query;
 
   // Run the query and pass the max value to the callback
   query.exec(function (err, doc) {
@@ -295,8 +231,8 @@ ME.Connection.prototype.getMax = function (collectionName, fieldName, conditions
  * Gets the minimum value of the given collection/field.
  * callback(err, minValue, doc)
  */
-ME.Connection.prototype.getMin = function (collectionName, fieldName, conditions, callback) {
-  return this.getMax(collectionName, fieldName, conditions, callback, 'min');
+ME.findMin = function (collectionName, fieldName, conditions, callback) {
+  return ME.findMax(collectionName, fieldName, conditions, callback, 'min');
 };
 
 /*
@@ -314,9 +250,9 @@ ME.Connection.prototype.getMin = function (collectionName, fieldName, conditions
  *  (returns integer)
  * callback(err, count)
  */
-ME.Connection.prototype.count = function (collectionName, fields, conditions, callback) {
+ME.count = function (collectionName, fields, conditions, callback) {
   conditions = conditions || {};
-  if (typeof fields === 'string') fields = [fields];  //ensure fields is an array of strings
+  if (_.isString(fields)) fields = [fields];  //ensure fields is an array of strings
 
   var mode  = (fields ? 'fields' : 'documents')
     , count = {};
@@ -330,7 +266,7 @@ ME.Connection.prototype.count = function (collectionName, fields, conditions, ca
   }
 
   // Setup query to return all matching documents
-  var query = this.model[collectionName].find(conditions);
+  var query = ME.model[collectionName].find(conditions);
 
   // Run the query and pass the max value to the callback
   query.exec(function (err, docs) {
@@ -364,14 +300,14 @@ ME.Connection.prototype.count = function (collectionName, fields, conditions, ca
 /*
  * Returns a new object ID to be used when adding new documents (optional).
  */
-ME.Connection.prototype.newObjectId = function () {
+ME.newObjectId = function () {
   return mongoose.Types.ObjectId();
 };
 
 /*
  * Returns true if the input string is likely to be an ObjectID.
  */
-ME.Connection.prototype.isObjectId = function (input) {
+ME.isObjectId = function (input) {
   var regexp = new RegExp("^[0-9a-fA-F]{24}$");
   return regexp.test(input);
 };
@@ -379,14 +315,14 @@ ME.Connection.prototype.isObjectId = function (input) {
 /*
  * Converts a string to an ObjectID.
  */
-ME.Connection.prototype.toObjectId = function (input) {
+ME.toObjectId = function (input) {
   return mongoose.Types.ObjectId(input);
 };
 
 /*
  * Converts an array of object IDs to an array of strings.
  */
-ME.Connection.prototype.objectIdArrayToString = function (input) {
+ME.objectIdArrayToString = function (input) {
   var newArr = [];
   for (var i = 0, ilen = input.length ; i < ilen ; i++) {
     newArr.push(input[i].toString());
@@ -397,20 +333,20 @@ ME.Connection.prototype.objectIdArrayToString = function (input) {
 /*
  * Returns true if the specified array contains the specified ObjectID.
  */
-ME.Connection.prototype.containsObjectId = function (arr, objectId, property) {
-  if (typeof property === 'undefined') property = '_id';
+ME.containsObjectId = function (arr, objectId, property) {
+  if (_.isUndefined(property)) property = '_id';
 
   var index = null;
 
   for (var i=0 ; i < arr.length ; i++) {
     var arrItem        = arr[i]
-      , isItemObjectId = this.isObjectId(arrItem)
+      , isItemObjectId = ME.isObjectId(arrItem)
       , validObjectId  = false
       , value;
 
     // Passed in an object
-    if (!isItemObjectId && typeof arrItem === 'object') {
-      validObjectId = this.isObjectId(arrItem[property]);
+    if (!isItemObjectId && _.isObject(arrItem)) {
+      validObjectId = ME.isObjectId(arrItem[property]);
       value         = arrItem[property];
     }
 

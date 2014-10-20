@@ -1,9 +1,12 @@
-var database = require('../database').use('main-db');
+var database = require('../database');
 
 module.exports.go = function () {
 
+  console.log('Second->Go');
+
   database.model.staff.findOne({
-      loginEmail: 'josh.cole@newgenrecruitment.com'
+      loginEmail:          'josh.cole@newgenrecruitment.com'
+    , 'deleted.isDeleted': false
   })
   .exec(function (err, doc) {
 

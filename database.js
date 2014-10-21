@@ -110,7 +110,7 @@ ME.rebuildSchema = function (schema, callback) {
   if (!_.isFunction(callback)) callback = function(){};
 
   // Convert the short-hand schema to Mongoose format
-  schemaBuilder.build(schema, function (err, mongooseModels) {
+  schemaBuilder.build(mongoose, schema, function (err, mongooseModels) {
 
     if (err) return callback(err);
 

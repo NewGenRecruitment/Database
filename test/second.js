@@ -1,4 +1,4 @@
-var database = require('../database');
+var database = require('../database').use('main-db');
 
 module.exports.go = function () {
 

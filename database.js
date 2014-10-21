@@ -100,7 +100,7 @@ ME.Connection.prototype.rebuildSchema = function (schema, callback) {
   var that = this;  //keep reference to 'this' inside nested methods.
 
   // Convert the short-hand schema to Mongoose format
-  schemaBuilder.build(schema, function (err, mongooseModels) {
+  schemaBuilder.build(mongoose, schema, function (err, mongooseModels) {
 
     if (err) return callback(err);
 

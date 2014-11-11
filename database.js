@@ -364,14 +364,14 @@ ME.Connection.prototype.count = function (collectionName, fields, conditions, ca
 /*
  * Returns a new object ID to be used when adding new documents (optional).
  */
-ME.Connection.prototype.newObjectId = function () {
+ME.newObjectId = ME.Connection.prototype.newObjectId = function () {
   return mongoose.Types.ObjectId();
 };
 
 /*
  * Returns true if the input string is likely to be an ObjectID.
  */
-ME.Connection.prototype.isObjectId = function (input) {
+ME.isObjectId = ME.Connection.prototype.isObjectId = function (input) {
   var regexp = new RegExp("^[0-9a-fA-F]{24}$");
   return regexp.test(input);
 };
@@ -379,14 +379,14 @@ ME.Connection.prototype.isObjectId = function (input) {
 /*
  * Converts a string to an ObjectID.
  */
-ME.Connection.prototype.toObjectId = function (input) {
+ME.toObjectId = ME.Connection.prototype.toObjectId = function (input) {
   return mongoose.Types.ObjectId(input);
 };
 
 /*
  * Converts an array of object IDs to an array of strings.
  */
-ME.Connection.prototype.objectIdArrayToString = function (input) {
+ME.objectIdArrayToString = ME.Connection.prototype.objectIdArrayToString = function (input) {
   var newArr = [];
   for (var i = 0, ilen = input.length ; i < ilen ; i++) {
     newArr.push(input[i].toString());
@@ -397,7 +397,7 @@ ME.Connection.prototype.objectIdArrayToString = function (input) {
 /*
  * Returns true if the specified array contains the specified ObjectID.
  */
-ME.Connection.prototype.containsObjectId = function (arr, objectId, property) {
+ME.containsObjectId = ME.Connection.prototype.containsObjectId = function (arr, objectId, property) {
   if (typeof property === 'undefined') property = '_id';
 
   var index = null;

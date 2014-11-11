@@ -2,7 +2,7 @@
   "publishConfig": { "registry": "https://newgen.registry.nodejitsu.com" },
   "repository": { "type": "git", "url": "https://github.com/NewGenRecruitment/Database.git" },
   "name": "ng-database",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "database.js",
   "author": "Josh Cole <josh.cole@newgenrecruitment.com>",
   "contributors": [{

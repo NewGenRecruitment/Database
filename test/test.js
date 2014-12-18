@@ -1,23 +1,37 @@
 var databaseModule     = require('../database')
   , DatabaseConnection = databaseModule.Connection
-  , DatabaseSchema     = require('./schema.json')
+  , databaseSchema     = require('ng-database-schema')
   , second             = require('./second');
 
-var database = new DatabaseConnection({
-    dbId:        'main-db'
-  , schema:      DatabaseSchema
-  , credentials: "mongodb://newgen-rec-dev-b1c974d0:f23022eb537af3e5d87c1ec8e43656ba@ds053109.mongolab.com:53109/newgen-crm-dev"
-});
+console.log('Schema: Preparing...');
 
-database.connect(function (err) {
+databaseSchema.prepare(function (err, schema) {
 
   if (err) {
-    console.log('Database: Failed to connect!');
+    console.log('Schema: Failed to prepare!', err);
     return;
   }
 
-  console.log('Database: Connected successfully!');
+  console.log('Schema: Ready.');
+  console.log('Database: Connecting...');
 
-  second.go();
+  var database = new DatabaseConnection({
+      dbId:        'main-db'
+    , schema:      schema
+    , credentials: "mongodb://newgen-crm2-dev-3e37f3225a6ad957be9feed2:b30eda667e127fd2a6b4df9764843223e3fd0ab9e1aeeae91000df47af24bf0e@ds027491.mongolab.com:27491/newgen-crm2-dev"
+  });
+
+  database.connect(function (err) {
+
+    if (err) {
+      console.log('Database: Failed to connect!', err);
+      return;
+    }
+
+    console.log('Database: Ready.');
+
+    second.go();
+
+  });
 
 });

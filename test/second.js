@@ -4,8 +4,8 @@ module.exports.go = function () {
 
   console.log('Second->Go');
 
-  database.model.staff.findOne({
-      loginEmail:          'josh.cole@newgenrecruitment.com'
+  database.model.employee.findOne({
+      'login.username':    'josh.cole'
     , 'deleted.isDeleted': false
   })
   .exec(function (err, doc) {
@@ -15,7 +15,7 @@ module.exports.go = function () {
       return;
     }
 
-    console.log('Staff Doc:', doc);
+    console.log('Employee Doc:', doc);
 
   });
 

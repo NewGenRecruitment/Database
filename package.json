@@ -1,14 +1,21 @@
 {
-  "publishConfig": { "registry": "https://newgen.registry.nodejitsu.com" },
-  "repository": { "type": "git", "url": "https://github.com/NewGenRecruitment/Database.git" },
+  "publishConfig": {
+    "registry": "https://newgen.registry.nodejitsu.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewGenRecruitment/Database.git"
+  },
   "name": "ng-database",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "main": "database.js",
   "author": "Josh Cole <josh.cole@newgenrecruitment.com>",
-  "contributors": [{
-    "name": "Josh Cole",
-    "email": "josh.cole@newgenrecruitment.com"
-  }],
+  "contributors": [
+    {
+      "name": "Josh Cole",
+      "email": "josh.cole@newgenrecruitment.com"
+    }
+  ],
   "dependencies": {
     "ng-extender": "1.0.x",
     "ng-logger": "1.0.x",

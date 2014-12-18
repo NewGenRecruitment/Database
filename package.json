@@ -15,5 +15,8 @@
     "ng-schema-builder": "1.1.x",
     "mongoose": "3.8.x",
     "underscore": "1.7.x"
+  },
+  "devDependencies": {
+    "ng-database-schema": "2.1.x"
   }
 }

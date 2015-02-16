@@ -1,19 +1,29 @@
 {
-  "publishConfig": {
-    "registry": "https://newgen.registry.nodejitsu.com"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/NewGenRecruitment/Database.git"
+    "url": "https://github.com/saikojosh/Mongoose-Database.git"
   },
-  "name": "ng-database",
+  "bugs": {
+    "url": "https://github.com/saikojosh/Mongoose-Database/issues"
+  },
+  "name": "mongoose-database",
   "version": "1.3.0",
+  "description": "Prepares, connects and manages the database connection using Mongoose, and provides various utility methods.",
+  "keywords": [
+    "database",
+    "connection",
+    "multiple",
+    "mongoose",
+    "mongo",
+    "mongo db",
+    "mongodb"
+  ],
   "main": "database.js",
-  "author": "Josh Cole <josh.cole@newgenrecruitment.com>",
+  "author": "Josh Cole <saikojosh@gmail.com> (http://www.JoshuaCole.me)",
   "contributors": [
     {
       "name": "Josh Cole",
-      "email": "josh.cole@newgenrecruitment.com"
+      "email": "saikojosh@gmail.com"
     }
   ],
   "dependencies": {

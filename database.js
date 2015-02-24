@@ -61,7 +61,7 @@ ME.generateDBId = function () {
  *  credentials (string)     A MongoDB connection string.
  *  debug       (bool>false) Set true to manually enable Mongoose debug output.
  */
-ME.Connection = function (options) {
+function Connection (options) {
 
   // Default option values
   options = objectAssignDeep({
@@ -94,7 +94,7 @@ ME.Connection = function (options) {
  * [Re]builds the Mongoose schema from the short-hand JSON format.
  * callback(err);
  */
-ME.Connection.prototype.rebuildSchema = function (schema, callback) {
+Connection.prototype.rebuildSchema = function (schema, callback) {
   if (typeof callback !== 'function') callback = function(){};
 
   var that = this;  //keep reference to 'this' inside nested methods.
@@ -115,7 +115,7 @@ ME.Connection.prototype.rebuildSchema = function (schema, callback) {
 /*
  * Toggle Mongoose debug output.
  */
-ME.Connection.prototype.setDebug = function (debug) {
+Connection.prototype.setDebug = function (debug) {
   this.debug = debug;
   mongoose.set('debug', debug);
 };
@@ -125,7 +125,7 @@ ME.Connection.prototype.setDebug = function (debug) {
  * callback(err, database)
  * handler(err, database)
  */
-ME.Connection.prototype.connect = function (callback) {
+Connection.prototype.connect = function (callback) {
 
   var that = this;  //keep reference to 'this' inside nested methods.
 
@@ -197,7 +197,7 @@ ME.Connection.prototype.connect = function (callback) {
  * Disconnects from the database.
  * callback();
  */
-ME.Connection.prototype.disconnect = function (callback) {
+Connection.prototype.disconnect = function (callback) {
   if (typeof callback !== 'function') callback = function(){};
 
   var that = this;  //keep reference to 'this' inside nested methods.
@@ -213,7 +213,7 @@ ME.Connection.prototype.disconnect = function (callback) {
  * Stores a handler to be run when the connection is ready.
  * onConnectHandler(err, database)
  */
-ME.Connection.prototype.onConnected = function (fn) {
+Connection.prototype.onConnected = function (fn) {
   if (typeof fn !== 'function') return;
 
   // Run it now if we are connected and all other connection handlers have been dealt with
@@ -228,7 +228,7 @@ ME.Connection.prototype.onConnected = function (fn) {
 /*
  * Returns true if the database is connected.
  */
-ME.Connection.prototype.isConnected = function () {
+Connection.prototype.isConnected = function () {
   return this.isConnectedFlag;
 };
 
@@ -237,7 +237,7 @@ ME.Connection.prototype.isConnected = function () {
  * parameter is optional.
  * callback(err, doc)
  */
-ME.Connection.prototype.pushReference = function (doc, fieldName, value, callback) {
+Connection.prototype.pushReference = function (doc, fieldName, value, callback) {
 
   // Push onto arrays, for all other types replace the value
   if (_.isArray(doc[fieldName])) { doc[fieldName].push(value); }
@@ -253,7 +253,7 @@ ME.Connection.prototype.pushReference = function (doc, fieldName, value, callbac
  * Gets a single document by its ID alone.
  * callback(err, doc)
  */
-ME.Connection.prototype.getById = function (collectionName, id, callback) {
+Connection.prototype.getById = function (collectionName, id, callback) {
 
   // Setup query to return one item
   this.model[collectionName].findOne({
@@ -269,7 +269,7 @@ ME.Connection.prototype.getById = function (collectionName, id, callback) {
  * set to 'min' this will return the minimum value instead.
  * callback(err, maxValue, doc)
  */
-ME.Connection.prototype.getMax = function (collectionName, fieldName, conditions, callback, getting) {
+Connection.prototype.getMax = function (collectionName, fieldName, conditions, callback, getting) {
   conditions = conditions || {};
   getting    = getting    || 'max';
 
@@ -295,7 +295,7 @@ ME.Connection.prototype.getMax = function (collectionName, fieldName, conditions
  * Gets the minimum value of the given collection/field.
  * callback(err, minValue, doc)
  */
-ME.Connection.prototype.getMin = function (collectionName, fieldName, conditions, callback) {
+Connection.prototype.getMin = function (collectionName, fieldName, conditions, callback) {
   return this.getMax(collectionName, fieldName, conditions, callback, 'min');
 };
 
@@ -314,7 +314,7 @@ ME.Connection.prototype.getMin = function (collectionName, fieldName, conditions
  *  (returns integer)
  * callback(err, count)
  */
-ME.Connection.prototype.count = function (collectionName, fields, conditions, callback) {
+Connection.prototype.count = function (collectionName, fields, conditions, callback) {
   conditions = conditions || {};
   if (typeof fields === 'string') fields = [fields];  //ensure fields is an array of strings
 
@@ -364,14 +364,14 @@ ME.Connection.prototype.count = function (collectionName, fields, conditions, ca
 /*
  * Returns a new object ID to be used when adding new documents (optional).
  */
-ME.newObjectId = ME.Connection.prototype.newObjectId = function () {
+ME.newObjectId = Connection.prototype.newObjectId = function () {
   return mongoose.Types.ObjectId();
 };
 
 /*
  * Returns true if the input string is likely to be an ObjectID.
  */
-ME.isObjectId = ME.Connection.prototype.isObjectId = function (input) {
+ME.isObjectId = Connection.prototype.isObjectId = function (input) {
   var regexp = new RegExp("^[0-9a-fA-F]{24}$");
   return regexp.test(input);
 };
@@ -379,14 +379,14 @@ ME.isObjectId = ME.Connection.prototype.isObjectId = function (input) {
 /*
  * Converts a string to an ObjectID.
  */
-ME.toObjectId = ME.Connection.prototype.toObjectId = function (input) {
+ME.toObjectId = Connection.prototype.toObjectId = function (input) {
   return mongoose.Types.ObjectId(input);
 };
 
 /*
  * Converts an array of object IDs to an array of strings.
  */
-ME.objectIdArrayToString = ME.Connection.prototype.objectIdArrayToString = function (input) {
+ME.objectIdArrayToString = Connection.prototype.objectIdArrayToString = function (input) {
   var newArr = [];
   for (var i = 0, ilen = input.length ; i < ilen ; i++) {
     newArr.push(input[i].toString());
@@ -397,7 +397,7 @@ ME.objectIdArrayToString = ME.Connection.prototype.objectIdArrayToString = funct
 /*
  * Returns true if the specified array contains the specified ObjectID.
  */
-ME.containsObjectId = ME.Connection.prototype.containsObjectId = function (arr, objectId, property) {
+ME.containsObjectId = Connection.prototype.containsObjectId = function (arr, objectId, property) {
   if (typeof property === 'undefined') property = '_id';
 
   var index = null;
@@ -435,3 +435,9 @@ ME.containsObjectId = ME.Connection.prototype.containsObjectId = function (arr, 
   return (index !== null);
 
 };
+
+/*
+ * Add connection to module export.
+ */
+
+ME.Connection = Connection;

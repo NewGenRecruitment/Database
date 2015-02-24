@@ -1,10 +1,10 @@
-var ME               = module.exports;
-var crypto           = require('crypto');
-var logger           = require('log-ninja');
-var mongoose         = require('mongoose');
-var schemaBuilder    = require('mongoose-schema-builder');
-var objectAssignDeep = require('object-assign-deep');
-var _                = require('underscore');
+var ME            = module.exports;
+var crypto        = require('crypto');
+var logger        = require('log-ninja');
+var mongoose      = require('mongoose');
+var schemaBuilder = require('mongoose-schema-builder');
+var extender      = require('object-extender');
+var _             = require('underscore');
 
 /*
  * List of stored database connections.
@@ -35,7 +35,7 @@ ME.store = function (dbId, dbObj) {
 
   // Update the existing reference
   else {
-    ME.connectionsList[dbId] = objectAssignDeep(ME.connectionsList[dbId], dbObj);
+    ME.connectionsList[dbId] = extender.extend(true, ME.connectionsList[dbId], dbObj);
   }
 
 };
@@ -64,7 +64,7 @@ ME.generateDBId = function () {
 function Connection (options) {
 
   // Default option values
-  options = objectAssignDeep({
+  options = extender.defaults({
       dbId:        null
     , schema:      null
     , credentials: null
@@ -105,7 +105,7 @@ Connection.prototype.rebuildSchema = function (schema, callback) {
     if (err) return callback(err);
 
     // Successfully merge in the models
-    that.model = objectAssignDeep(that.model, mongooseModels);
+    that.model = extender.extend(that.model, mongooseModels);
     return callback(null);
 
   });

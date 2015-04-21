@@ -7,7 +7,7 @@
     "url": "https://github.com/saikojosh/Mongoose-Database/issues"
   },
   "name": "mongoose-database",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Prepares, connects and manages the database connection using Mongoose, and provides various utility methods.",
   "keywords": [
     "database",

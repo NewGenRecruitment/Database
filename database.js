@@ -74,7 +74,7 @@ function Connection (options) {
     dbId:        null,
     schema:      null,
     credentials: null,
-    replset:     null,
+    replicas:    null,
     debug:       false
   }, options);
 
@@ -87,7 +87,7 @@ function Connection (options) {
   this.dbId              = options.dbId;
   this.schema            = options.schema;
   this.credentials       = options.credentials;
-  this.replset           = options.replset;
+  this.replicas          = (options.replicas && typeof options.replicas === 'string' ? [options.replicas] : options.replicas);
   this.debug             = options.debug;
   this.conx              = null;
   this.isConnectedFlag   = false;
@@ -160,12 +160,13 @@ Connection.prototype.connect = function (callback) {
   // When debugging, this will output all calls mongoose makes.
   if (this.debug) { mongoose.set('debug', true); }
 
-  // Prepare any Mongoose connection options.
-  var connectionOptions = {};
-  if (this.replset) { connectionOptions.replset = this.replset; }
+  var connectionString = this.credentials;
+
+  // Prepare any replicas for connecting.
+  if (this.replicas) { connectionString += ',' + this.replicas.join(','); }
 
   // Connect!
-  mongoose.connect(this.credentials, connectionOptions);
+  mongoose.connect(connectionString);
   this.conx = mongoose.connection;
 
   // Prepare the method for passing details to each handler.

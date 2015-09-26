@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "log-ninja": "1.1.x",
-    "mongoose": "3.8.x",
+    "mongoose": "4.1.x",
     "mongoose-schema-builder": "1.2.x",
     "object-extender": "1.2.x",
     "underscore": "1.7.x"
